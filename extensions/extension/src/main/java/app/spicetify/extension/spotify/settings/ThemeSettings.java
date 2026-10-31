@@ -80,6 +80,14 @@ final class ThemeSettings {
                         activity.refreshRestartBar();
                     });
         }
+        SpotifyStyle.toggleRow(content, "Animated stars",
+                "A night sky with twinkling and shooting stars behind Spotify's pages, like the StarryNight desktop theme.",
+                ThemeBackground.starsEnabled(activity), (button, enabled) -> {
+                    ThemeBackground.setStars(activity, enabled);
+                    // The pages turn see-through and the sky is drawn when Spotify's screen is created.
+                    PatchSettings.markRestartRequired();
+                    activity.refreshRestartBar();
+                });
         SpotifyStyle.actionRow(content, "Spicetify Marketplace", "Browse community themes and use their colors",
                 view -> activity.openPage(SpicetifySettingsScreen.PAGE_MARKETPLACE));
         SpotifyStyle.actionRow(content, "Paste a Spicetify theme", "Use a color.ini, or CSS with --spice-* colors",

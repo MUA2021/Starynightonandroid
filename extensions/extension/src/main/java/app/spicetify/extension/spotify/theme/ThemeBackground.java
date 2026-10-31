@@ -12,6 +12,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.view.View;
@@ -29,6 +30,7 @@ public final class ThemeBackground {
     private static final String FILE = "spicetify_background";
     private static final String PREFERENCES = "spicetify_theme";
     private static final String BLUR = "background_blur";
+    private static final String STARS = "animated_stars";
     /** Half black over the image, so text on it stays readable, as Galaxy darkens its backgrounds. */
     private static final int SCRIM = 0x80000000;
     /** The blur works on a copy no larger than this on either side, which drawing scales up; blurred, it loses nothing. */
@@ -47,10 +49,19 @@ public final class ThemeBackground {
     @SuppressLint("DiscouragedApi") // Spotify's view ID isn't known when the extension is compiled.
     static void applyTo(Activity activity) {
         File file = new File(activity.getFilesDir(), FILE);
-        if (!file.exists()) return;
+        boolean stars = starsEnabled(activity);
+        if (!file.exists() && !stars) return;
         int mainContentId = activity.getResources().getIdentifier("main_content", "id", activity.getPackageName());
         View mainContent = mainContentId == 0 ? null : activity.findViewById(mainContentId);
         if (mainContent == null) return;
+        if (stars) {
+            // The animated sky takes the place of any image.
+            activity.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF000000));
+            View content = activity.findViewById(android.R.id.content);
+            if (content != null) content.setBackground(null);
+            mainContent.setBackground(new StarrySky(activity.getResources().getDisplayMetrics().density));
+            return;
+        }
         if (cached == null) {
             cached = decode(file, activity);
             if (cached == null) return;
@@ -65,6 +76,21 @@ public final class ThemeBackground {
     /** Whether an image is saved to draw behind Spotify. */
     public static boolean hasImage(Context context) {
         return new File(context.getFilesDir(), FILE).exists();
+    }
+
+    /** Whether the animated starry sky is drawn behind Spotify. */
+    public static boolean starsEnabled(Context context) {
+        return preferences(context).getBoolean(STARS, false);
+    }
+
+    /** Saves the choice; Spotify's screen takes it when it's created again. */
+    public static void setStars(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean(STARS, enabled).apply();
+    }
+
+    /** Whether Spotify's pages are made see-through: an image or the starry sky is behind them. */
+    public static boolean seeThrough(Context context) {
+        return hasImage(context) || starsEnabled(context);
     }
 
     public static boolean blurEnabled(Context context) {

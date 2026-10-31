@@ -49,7 +49,7 @@ public final class ThemeRuntime {
             // same), and the table follows the installed Spotify's resource IDs, so the saved theme is
             // registered on every start. Material You gets the current wallpaper colors this way too.
             Map<String, Integer> colors = roleColors(application, ThemeState.load(application));
-            boolean image = ThemeBackground.hasImage(application);
+            boolean image = ThemeBackground.seeThrough(application);
             Map<String, Integer> values = values(colors, image);
             // Compose reads the values from memory, so at startup it follows the saved theme even if
             // the resources can't take it.
@@ -78,7 +78,8 @@ public final class ThemeRuntime {
             // The role map is empty only when the theme patch didn't inject its table.
             if (!supported() || ThemeRoleMap.load().isEmpty()) return false;
             Map<String, Integer> colors = roleColors(context, selection);
-            Map<String, Integer> values = values(colors, image != null);
+            boolean seeThrough = image != null || ThemeBackground.starsEnabled(context);
+            Map<String, Integer> values = values(colors, seeThrough);
             // The image is written first, so once the resources take the theme only a rename is left.
             File staged = image == null ? null : ThemeBackground.stage(context, image);
             try {
@@ -88,7 +89,7 @@ public final class ThemeRuntime {
             } finally {
                 if (staged != null) staged.delete();
             }
-            follow(colors, values, image != null);
+            follow(colors, values, seeThrough);
             ThemeState.save(context, selection);
             return true;
         } catch (Exception e) {
