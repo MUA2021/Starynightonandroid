@@ -37,6 +37,11 @@ final class StarrySky extends Drawable implements Runnable {
     private long[] twinkleOffset = new long[0];
     private final Shooting[] shooting = new Shooting[SHOOTING_STARS];
     private boolean running = true;
+    /** What this layer draws: the gradient and the stars, the gradient alone, or the stars alone. */
+    static final int FULL = 0, SKY = 1, STARS = 2;
+    private final int mode;
+    /** Stars drawn over Spotify's pages are a little dimmer, so text stays easy to read. */
+    private static final float OVERLAY_BRIGHTNESS = 0.7f;
 
     private static final class Shooting {
         float startX, startY, dx, dy;
@@ -44,7 +49,13 @@ final class StarrySky extends Drawable implements Runnable {
     }
 
     StarrySky(float density) {
+        this(density, FULL);
+    }
+
+    StarrySky(float density, int mode) {
         this.density = density;
+        this.mode = mode;
+        if (mode == SKY) running = false;
         paint.setColor(0xFFFFFFFF);
         glow.setColor(0xFFFFFFFF);
         glow.setStrokeCap(Paint.Cap.ROUND);
@@ -62,9 +73,13 @@ final class StarrySky extends Drawable implements Runnable {
         if (width <= 0 || height <= 0) return;
         still = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(still);
-        Paint sky = new Paint();
-        sky.setShader(new LinearGradient(0, 0, 0, height, TOP, BOTTOM, Shader.TileMode.CLAMP));
-        canvas.drawRect(0, 0, width, height, sky);
+        if (mode != STARS) {
+            Paint sky = new Paint();
+            sky.setShader(new LinearGradient(0, 0, 0, height, TOP, BOTTOM, Shader.TileMode.CLAMP));
+            canvas.drawRect(0, 0, width, height, sky);
+        }
+        if (mode == SKY) return;
+        float dim = mode == STARS ? OVERLAY_BRIGHTNESS : 1f;
 
         float areaDp = (width / density) * (height / density);
         int count = Math.max(20, Math.round(areaDp / DP2_PER_STAR));
@@ -84,7 +99,7 @@ final class StarrySky extends Drawable implements Runnable {
                 tr[twinkling] = radius;
                 twinkling++;
             } else {
-                star.setAlpha(128 + random.nextInt(128));
+                star.setAlpha((int) ((128 + random.nextInt(128)) * dim));
                 canvas.drawCircle(x, y, radius, star);
             }
         }
@@ -120,17 +135,20 @@ final class StarrySky extends Drawable implements Runnable {
     public void draw(Canvas canvas) {
         Rect bounds = getBounds();
         if (still == null) {
-            canvas.drawColor(TOP);
+            if (mode != STARS) canvas.drawColor(TOP);
             return;
         }
         canvas.drawBitmap(still, bounds.left, bounds.top, null);
+        // The gradient alone never changes, so it isn't redrawn.
+        if (mode == SKY) return;
+        float dim = mode == STARS ? OVERLAY_BRIGHTNESS : 1f;
         long now = SystemClock.uptimeMillis();
 
         for (int i = 0; i < twinkleX.length; i++) {
             // A 5-second cycle, like the theme's twinkle keyframes: bright, dim, bright.
             double phase = ((now + twinkleOffset[i]) % 5000) / 5000.0 * 2 * Math.PI;
             int alpha = (int) (60 + 195 * (0.5 + 0.5 * Math.cos(phase)));
-            paint.setAlpha(alpha);
+            paint.setAlpha((int) (alpha * dim));
             canvas.drawCircle(bounds.left + twinkleX[i], bounds.top + twinkleY[i], twinkleR[i], paint);
         }
 
@@ -151,13 +169,13 @@ final class StarrySky extends Drawable implements Runnable {
             float uy = s.dy / length;
             glow.setShader(new LinearGradient(x, y, x - ux * tail, y - uy * tail,
                     0xFFFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
-            glow.setAlpha((int) (255 * fade));
+            glow.setAlpha((int) (255 * fade * dim));
             glow.setStrokeWidth(1.5f * density);
             canvas.drawLine(x, y, x - ux * tail, y - uy * tail, glow);
             glow.setShader(null);
-            paint.setAlpha((int) (255 * fade));
+            paint.setAlpha((int) (255 * fade * dim));
             canvas.drawCircle(x, y, 2f * density, paint);
-            paint.setAlpha((int) (40 * fade));
+            paint.setAlpha((int) (40 * fade * dim));
             canvas.drawCircle(x, y, 6f * density, paint);
         }
         paint.setAlpha(255);
@@ -172,6 +190,7 @@ final class StarrySky extends Drawable implements Runnable {
     @Override
     public boolean setVisible(boolean visible, boolean restart) {
         boolean changed = super.setVisible(visible, restart);
+        if (mode == SKY) return changed;
         running = visible;
         if (visible) {
             invalidateSelf();
@@ -189,6 +208,6 @@ final class StarrySky extends Drawable implements Runnable {
 
     @Override
     public int getOpacity() {
-        return PixelFormat.OPAQUE;
+        return mode == STARS ? PixelFormat.TRANSLUCENT : PixelFormat.OPAQUE;
     }
 }

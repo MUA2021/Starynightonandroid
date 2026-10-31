@@ -16,6 +16,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.view.ViewGroup;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,6 +32,9 @@ public final class ThemeBackground {
     private static final String PREFERENCES = "spicetify_theme";
     private static final String BLUR = "background_blur";
     private static final String STARS = "animated_stars";
+    private static final String STARS_EVERYWHERE = "animated_stars_everywhere";
+    /** Marks the star layer laid over an activity, so it is added once. */
+    private static final String OVERLAY_TAG = "spicetify_star_overlay";
     /** Half black over the image, so text on it stays readable, as Galaxy darkens its backgrounds. */
     private static final int SCRIM = 0x80000000;
     /** The blur works on a copy no larger than this on either side, which drawing scales up; blurred, it loses nothing. */
@@ -59,7 +63,26 @@ public final class ThemeBackground {
             activity.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF000000));
             View content = activity.findViewById(android.R.id.content);
             if (content != null) content.setBackground(null);
-            mainContent.setBackground(new StarrySky(activity.getResources().getDisplayMetrics().density));
+            float density = activity.getResources().getDisplayMetrics().density;
+            if (!starsEverywhere(activity)) {
+                mainContent.setBackground(new StarrySky(density));
+                return;
+            }
+            // The sky stays behind the pages; the stars go over every screen, Now Playing and Your
+            // Library included, which paint their own backgrounds over anything behind them.
+            mainContent.setBackground(new StarrySky(density, StarrySky.SKY));
+            ViewGroup decor = (ViewGroup) activity.getWindow().getDecorView();
+            if (decor.findViewWithTag(OVERLAY_TAG) == null) {
+                View overlay = new View(activity);
+                overlay.setTag(OVERLAY_TAG);
+                overlay.setClickable(false);
+                overlay.setFocusable(false);
+                overlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                overlay.setTranslationZ(10000f);
+                overlay.setBackground(new StarrySky(density, StarrySky.STARS));
+                decor.addView(overlay, new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
             return;
         }
         if (cached == null) {
@@ -86,6 +109,15 @@ public final class ThemeBackground {
     /** Saves the choice; Spotify's screen takes it when it's created again. */
     public static void setStars(Context context, boolean enabled) {
         preferences(context).edit().putBoolean(STARS, enabled).apply();
+    }
+
+    /** Whether the stars are drawn over every screen, not only behind the pages that let them show. */
+    public static boolean starsEverywhere(Context context) {
+        return preferences(context).getBoolean(STARS_EVERYWHERE, true);
+    }
+
+    public static void setStarsEverywhere(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean(STARS_EVERYWHERE, enabled).apply();
     }
 
     /** Whether Spotify's pages are made see-through: an image or the starry sky is behind them. */

@@ -88,6 +88,15 @@ final class ThemeSettings {
                     PatchSettings.markRestartRequired();
                     activity.refreshRestartBar();
                 });
+        if (ThemeBackground.starsEnabled(activity)) {
+            SpotifyStyle.toggleRow(content, "Stars on every screen",
+                    "Draws the stars over Now Playing, Your Library and every other screen, not only behind the pages.",
+                    ThemeBackground.starsEverywhere(activity), (button, enabled) -> {
+                        ThemeBackground.setStarsEverywhere(activity, enabled);
+                        PatchSettings.markRestartRequired();
+                        activity.refreshRestartBar();
+                    });
+        }
         SpotifyStyle.actionRow(content, "Spicetify Marketplace", "Browse community themes and use their colors",
                 view -> activity.openPage(SpicetifySettingsScreen.PAGE_MARKETPLACE));
         SpotifyStyle.actionRow(content, "Paste a Spicetify theme", "Use a color.ini, or CSS with --spice-* colors",
