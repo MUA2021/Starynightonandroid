@@ -33,6 +33,7 @@ public final class ThemeBackground {
     private static final String BLUR = "background_blur";
     private static final String STARS = "animated_stars";
     private static final String STARS_EVERYWHERE = "animated_stars_everywhere";
+    private static final String STARS_TINT = "animated_stars_tint";
     /** Marks the star layer laid over an activity, so it is added once. */
     private static final String OVERLAY_TAG = "spicetify_star_overlay";
     /** Half black over the image, so text on it stays readable, as Galaxy darkens its backgrounds. */
@@ -79,7 +80,7 @@ public final class ThemeBackground {
                 overlay.setFocusable(false);
                 overlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 overlay.setTranslationZ(10000f);
-                overlay.setBackground(new StarrySky(density, StarrySky.STARS));
+                overlay.setBackground(new StarrySky(density, StarrySky.STARS, starsTint(activity)));
                 decor.addView(overlay, new ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
@@ -118,6 +119,15 @@ public final class ThemeBackground {
 
     public static void setStarsEverywhere(Context context, boolean enabled) {
         preferences(context).edit().putBoolean(STARS_EVERYWHERE, enabled).apply();
+    }
+
+    /** Whether the star layer also tints every screen navy, for the screens with Spotify's own greys. */
+    public static boolean starsTint(Context context) {
+        return preferences(context).getBoolean(STARS_TINT, true);
+    }
+
+    public static void setStarsTint(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean(STARS_TINT, enabled).apply();
     }
 
     /** Whether Spotify's pages are made see-through: an image or the starry sky is behind them. */

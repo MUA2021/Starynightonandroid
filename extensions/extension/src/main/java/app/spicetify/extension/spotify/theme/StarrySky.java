@@ -6,6 +6,8 @@ import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
@@ -40,6 +42,11 @@ final class StarrySky extends Drawable implements Runnable {
     /** What this layer draws: the gradient and the stars, the gradient alone, or the stars alone. */
     static final int FULL = 0, SKY = 1, STARS = 2;
     private final int mode;
+    /** Over every screen: navy that blacks and dark greys take on, while white stays white. */
+    private static final int TINT_TOP = 0xFF0B1626;
+    private static final int TINT_BOTTOM = 0xFF142B44;
+    private final boolean tint;
+    private final Paint tintPaint = new Paint();
     /** Stars drawn over Spotify's pages are a little dimmer, so text stays easy to read. */
     private static final float OVERLAY_BRIGHTNESS = 0.7f;
 
@@ -53,8 +60,15 @@ final class StarrySky extends Drawable implements Runnable {
     }
 
     StarrySky(float density, int mode) {
+        this(density, mode, false);
+    }
+
+    StarrySky(float density, int mode, boolean tint) {
         this.density = density;
         this.mode = mode;
+        this.tint = tint && mode == STARS;
+        // Screen blending lightens what's below by the navy: black becomes navy, white stays white.
+        tintPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
         if (mode == SKY) running = false;
         paint.setColor(0xFFFFFFFF);
         glow.setColor(0xFFFFFFFF);
@@ -71,6 +85,7 @@ final class StarrySky extends Drawable implements Runnable {
             still = null;
         }
         if (width <= 0 || height <= 0) return;
+        tintPaint.setShader(new LinearGradient(0, 0, 0, height, TINT_TOP, TINT_BOTTOM, Shader.TileMode.CLAMP));
         still = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(still);
         if (mode != STARS) {
@@ -137,6 +152,12 @@ final class StarrySky extends Drawable implements Runnable {
         if (still == null) {
             if (mode != STARS) canvas.drawColor(TOP);
             return;
+        }
+        if (tint) {
+            canvas.save();
+            canvas.translate(bounds.left, bounds.top);
+            canvas.drawRect(0, 0, bounds.width(), bounds.height(), tintPaint);
+            canvas.restore();
         }
         canvas.drawBitmap(still, bounds.left, bounds.top, null);
         // The gradient alone never changes, so it isn't redrawn.

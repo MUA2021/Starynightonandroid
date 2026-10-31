@@ -96,6 +96,15 @@ final class ThemeSettings {
                         PatchSettings.markRestartRequired();
                         activity.refreshRestartBar();
                     });
+            if (ThemeBackground.starsEverywhere(activity)) {
+                SpotifyStyle.toggleRow(content, "Navy tint on every screen",
+                        "Turns the grey backgrounds of Now Playing, Your Library and other screens navy. Pictures get a slight blue tint.",
+                        ThemeBackground.starsTint(activity), (button, enabled) -> {
+                            ThemeBackground.setStarsTint(activity, enabled);
+                            PatchSettings.markRestartRequired();
+                            activity.refreshRestartBar();
+                        });
+            }
         }
         SpotifyStyle.actionRow(content, "Spicetify Marketplace", "Browse community themes and use their colors",
                 view -> activity.openPage(SpicetifySettingsScreen.PAGE_MARKETPLACE));
