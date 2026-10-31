@@ -78,7 +78,8 @@ public final class ThemeRuntime {
             // The role map is empty only when the theme patch didn't inject its table.
             if (!supported() || ThemeRoleMap.load().isEmpty()) return false;
             Map<String, Integer> colors = roleColors(context, selection);
-            boolean seeThrough = image != null || ThemeBackground.starsEnabled(context);
+            boolean seeThrough = image != null
+                    || (ThemeBackground.starsEnabled(context) && !ThemeBackground.starsEverywhere(context));
             Map<String, Integer> values = values(colors, seeThrough);
             // The image is written first, so once the resources take the theme only a rename is left.
             File staged = image == null ? null : ThemeBackground.stage(context, image);

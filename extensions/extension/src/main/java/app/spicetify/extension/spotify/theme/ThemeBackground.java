@@ -123,7 +123,7 @@ public final class ThemeBackground {
 
     /** Whether the star layer also tints every screen navy, for the screens with Spotify's own greys. */
     public static boolean starsTint(Context context) {
-        return preferences(context).getBoolean(STARS_TINT, true);
+        return preferences(context).getBoolean(STARS_TINT, false);
     }
 
     public static void setStarsTint(Context context, boolean enabled) {
@@ -132,7 +132,9 @@ public final class ThemeBackground {
 
     /** Whether Spotify's pages are made see-through: an image or the starry sky is behind them. */
     public static boolean seeThrough(Context context) {
-        return hasImage(context) || starsEnabled(context);
+        // With the stars over every screen, the pages stay solid: only the stars-behind mode needs
+        // see-through pages, and see-through sheets like Now Playing would show the page under them.
+        return hasImage(context) || (starsEnabled(context) && !starsEverywhere(context));
     }
 
     public static boolean blurEnabled(Context context) {
