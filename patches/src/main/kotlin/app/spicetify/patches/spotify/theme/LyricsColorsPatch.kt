@@ -126,13 +126,13 @@ internal val lyricsColorsPatch = bytecodePatch {
             .mapNotNull { (it as? ReferenceInstruction)?.reference as? MethodReference }
             .firstOrNull { it.definingClass == lambdaClass && it.name == "<init>" }
             ?: throw PatchException("The lyrics line doesn't build its text lambda.")
-        val constructor = mutableClassDefBy(lambdaClass).methods.single {
+        val lambdaConstructor = mutableClassDefBy(lambdaClass).methods.single {
             it.name == "<init>" && it.parameterTypes.map { p -> p.toString() } == lambdaInit.parameterTypes.map { p -> p.toString() }
         }
-        val implementation = constructor.implementation!!
-        val parameterRegisters = 1 + constructor.parameterTypes.sumOf { p -> if (p.toString() == "J" || p.toString() == "D") 2 as Int else 1 }
+        val implementation = lambdaConstructor.implementation!!
+        val parameterRegisters = 1 + lambdaConstructor.parameterTypes.sumOf { p -> if (p.toString() == "J" || p.toString() == "D") 2 as Int else 1 }
         val scaleParameter = implementation.registerCount - parameterRegisters + 1 +
-            constructor.parameterTypes.take(3).sumOf { p -> if (p.toString() == "J" || p.toString() == "D") 2 as Int else 1 }
+            lambdaConstructor.parameterTypes.take(3).sumOf { p -> if (p.toString() == "J" || p.toString() == "D") 2 as Int else 1 }
         val scaleField = implementation.instructions.firstNotNullOfOrNull { instruction ->
             if (instruction.opcode != com.android.tools.smali.dexlib2.Opcode.IPUT_OBJECT) return@firstNotNullOfOrNull null
             if ((instruction as com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction).registerA != scaleParameter) return@firstNotNullOfOrNull null
