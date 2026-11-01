@@ -184,7 +184,8 @@ public final class ThemeRuntime {
         public void onActivityResumed(Activity activity) {
             try {
                 HighRefresh.applyTo(activity);
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
+                // Never let the refresh rate request stop Spotify from opening a screen.
                 Log.w(TAG, "Refresh rate unchanged in " + activity.getClass().getName(), e);
             }
         }

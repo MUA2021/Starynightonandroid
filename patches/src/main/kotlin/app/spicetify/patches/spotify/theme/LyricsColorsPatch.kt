@@ -3,6 +3,9 @@ package app.spicetify.patches.spotify.theme
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.string
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
@@ -54,21 +57,6 @@ internal object ColorLyricsConverterFingerprint : Fingerprint(
     },
 )
 
-/**
- * Full-screen lyrics' color getter (colors, getter): Spotify's own gray when the colors equal its
- * "no colors" fallback, which it builds from these hex strings.
- */
-internal object LyricsFallbackColorsFingerprint : Fingerprint(
-    returnType = "J",
-    filters = listOf(string("FF353535"), string("FFCDCDCD")),
-    custom = { method, _ ->
-        method.implementation?.instructions?.any {
-            val call = (it as? ReferenceInstruction)?.reference as? MethodReference
-            call != null && call.name == "equals" && !call.definingClass.startsWith("Ljava/")
-        } == true
-    },
-)
-
 /** The lyrics line, which animates its color and its scale between the sung line and the others. */
 internal object LyricsLineFingerprint : Fingerprint(
     filters = listOf(string("lyrics line scale")),
@@ -107,19 +95,20 @@ internal val lyricsColorsPatch = bytecodePatch {
         """.trimIndent())
         Logger.getLogger("").info("Lyrics colors hook: $colorsClass-><init>")
 
-        // Full-screen lyrics: the "no colors" comparison would match every restyled song and turn it gray.
-        val fallback = LyricsFallbackColorsFingerprint.matchAll(1..1).single().method
-        val fallbackInstructions = fallback.implementation!!.instructions
-        val equalsIndex = fallbackInstructions.indices.singleOrNull { index ->
-            val call = (fallbackInstructions[index] as? ReferenceInstruction)?.reference as? MethodReference
-            call != null && call.name == "equals" && call.definingClass == colorsClass
-        } ?: throw PatchException("Lyrics fallback colors comparison not found.")
-        val matches = (fallbackInstructions[equalsIndex + 1] as OneRegisterInstruction).registerA
-        fallback.addInstructions(equalsIndex + 2, """
-            invoke-static/range { v$matches .. v$matches }, $LYRICS_COLORS_CLASS->isFallback(Z)Z
-            move-result v$matches
-        """.trimIndent())
-        Logger.getLogger("").info("Lyrics fallback colors hook: ${fallback.definingClass}->${fallback.name}")
+        // Full-screen lyrics turn gray when a song's colors equal Spotify's "no colors" fallback, which
+        // restyled colors always would. Two different colors objects stop counting as equal instead.
+        val equals = mutableClassDefBy(colorsClass).methods.singleOrNull {
+            it.name == "equals" && it.parameterTypes.map { p -> p.toString() } == listOf("Ljava/lang/Object;")
+        } ?: throw PatchException("Lyrics colors equals not found.")
+        if (equals.implementation!!.registerCount < 3) throw PatchException("Lyrics colors equals has no free register.")
+        equals.addInstructionsWithLabels(0, """
+            invoke-static { p0, p1 }, $LYRICS_COLORS_CLASS->different(Ljava/lang/Object;Ljava/lang/Object;)Z
+            move-result v0
+            if-eqz v0, :original
+            const/4 v0, 0x0
+            return v0
+        """.trimIndent(), ExternalLabel("original", equals.getInstruction(0)))
+        Logger.getLogger("").info("Lyrics colors equals hook: $colorsClass->equals")
 
         // The lines not being sung: smaller, so the sung line stands out the way it does in Spicy Lyrics.
         val line = LyricsLineFingerprint.matchAll(1..1).single().method

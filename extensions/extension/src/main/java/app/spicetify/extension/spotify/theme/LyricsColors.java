@@ -64,10 +64,11 @@ public final class LyricsColors {
 
     /**
      * Full-screen lyrics compare a song's colors with Spotify's "no colors" fallback and use their own
-     * gray when they match. Restyled, every song matches it, so the comparison is turned off.
+     * gray when they match. Restyled, every song's colors would match it, so while restyled, two
+     * different colors objects never count as equal; the same object still equals itself.
      */
-    public static boolean isFallback(boolean matches) {
-        return !active() && matches;
+    public static boolean different(Object colors, Object other) {
+        return active() && colors != other;
     }
 
     /** Spotify shrinks the lines not being sung to this; Spicy Lyrics sets them back further. */
