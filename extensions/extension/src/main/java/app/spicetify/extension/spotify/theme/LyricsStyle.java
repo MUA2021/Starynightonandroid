@@ -22,7 +22,10 @@ public final class LyricsStyle {
     private static final int SHADOW_BIT = 1 << 13;
     private static final int ALL_DEFAULT = (1 << 24) - 1;
     private static final int BOLD = 700;
-    private static final float GLOW_RADIUS = 28f;
+    /** Android blurs text shadows up to about 25px; well under that keeps the glow on the letters. */
+    private static final float GLOW_RADIUS = 10f;
+    /** The glow's strongest opacity: soft, so the white text stays crisp on top of it. */
+    private static final int GLOW_ALPHA = 0x80;
 
     private static Object line;
     private static Method copy;
@@ -140,7 +143,7 @@ public final class LyricsStyle {
 
     /** A white glow around the text, centred on it. */
     private static Object shadow(float glow) throws ReflectiveOperationException {
-        int alpha = Math.round(0xD9 * glow);
+        int alpha = Math.round(GLOW_ALPHA * glow);
         long color = ((long) ((alpha << 24) | 0x00FFFFFF) & 0xFFFFFFFFL) << 32;
         long offset = 0L;
         float radius = GLOW_RADIUS * glow;
