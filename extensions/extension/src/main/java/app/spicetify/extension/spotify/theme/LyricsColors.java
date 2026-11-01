@@ -5,8 +5,8 @@ import android.graphics.Color;
 
 /**
  * Replaces the colors Spotify picks for each song's lyrics (the lyrics card and the full-screen
- * lyrics) styled like Spicy Lyrics on desktop: the song's own color as frosted glass, the line being
- * sung in white, and the other lines in see-through white. Spotify's colors stay when the setting is off.
+ * lyrics) styled like Spicy Lyrics on desktop: the theme's card color as a frosted panel, the line
+ * being sung in white, and the other lines in see-through white. Spotify's colors stay when the setting is off.
  *
  * <p>The lyrics colors object's constructor calls these, so lyrics from the network, the cache and
  * offline downloads all take them. Each returns a value that doesn't depend on its input, so an
@@ -15,9 +15,8 @@ import android.graphics.Color;
 public final class LyricsColors {
     private static final String PREFERENCES = "spicetify_theme";
     private static final String KEY = "themed_lyrics";
-    /** Frosted glass: how far the song's color moves toward white, and toward its own gray. */
-    private static final float FROST_LIGHT = 0.16f;
-    private static final float FROST_SOFTEN = 0.22f;
+    /** Frosted glass: how far the theme's card color moves toward white, like the desktop card. */
+    private static final float FROST_LIGHT = 0.12f;
     /** The other lines: see-through white, the way Spicy Lyrics fades the lines not being sung. */
     private static final int FADED_ALPHA = 0x73;
 
@@ -50,24 +49,17 @@ public final class LyricsColors {
     }
 
     /**
-     * Behind the lyrics: Spotify's color for the song, frosted. Solid, like Spicy Lyrics' card, and
-     * lighter and softer than the song's color, the way frosted glass looks over it.
+     * Behind the lyrics: the theme's card color, frosted, the neutral glass panel the desktop shows
+     * over the starry sky, rather than a color picked for each song.
      */
     public static int background(int spotify) {
         if (!active()) return spotify;
-        int r = Color.red(spotify);
-        int g = Color.green(spotify);
-        int b = Color.blue(spotify);
-        int gray = Math.round(r * 0.299f + g * 0.587f + b * 0.114f);
-        r = frost(r, gray);
-        g = frost(g, gray);
-        b = frost(b, gray);
-        return Color.rgb(r, g, b);
+        int card = ThemeRuntime.color("card", Color.rgb(21, 34, 56));
+        return Color.rgb(frost(Color.red(card)), frost(Color.green(card)), frost(Color.blue(card)));
     }
 
-    private static int frost(int channel, int gray) {
-        float soft = channel + (gray - channel) * FROST_SOFTEN;
-        return Math.min(255, Math.round(soft + (255 - soft) * FROST_LIGHT));
+    private static int frost(int channel) {
+        return Math.min(255, Math.round(channel + (255 - channel) * FROST_LIGHT));
     }
 
     /** Spotify shrinks the lines not being sung to this; Spicy Lyrics sets them back further. */

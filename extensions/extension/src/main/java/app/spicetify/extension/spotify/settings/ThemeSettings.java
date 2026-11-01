@@ -82,7 +82,7 @@ final class ThemeSettings {
                     });
         }
         SpotifyStyle.toggleRow(content, "Spicy-style lyrics",
-                "Spicy Lyrics style: the song's color as frosted glass, bold lines, and the line being sung glowing white.",
+                "Spicy Lyrics style: a frosted panel in the theme's colors, bold lines, and the line being sung glowing white.",
                 LyricsColors.isEnabled(activity), (button, enabled) -> {
                     LyricsColors.setEnabled(activity, enabled);
                     PatchSettings.markRestartRequired();
