@@ -23,11 +23,14 @@ public final class LyricsStyle {
     private static final int ALL_DEFAULT = (1 << 24) - 1;
     private static final int BOLD = 700;
     /** Android blurs text shadows up to about 25px; well under that keeps the glow on the letters. */
-    private static final float GLOW_RADIUS = 10f;
+    private static final float GLOW_RADIUS = 12f;
     /** The glow's strongest opacity: soft, so the white text stays crisp on top of it. */
-    private static final int GLOW_ALPHA = 0x80;
-    /** Off: see restyle. */
+    private static final int GLOW_ALPHA = 0xA6;
+    /** Off for the whole line: see restyle. The sung words glow instead, in glowSpan. */
     private static final boolean GLOW = false;
+    /** SpanStyle's constructor parameters, in Compose's order: shadow is the 14th of 16. */
+    private static final int SPAN_SHADOW_BIT = 1 << 13;
+    private static final int SPAN_ALL_DEFAULT = (1 << 16) - 1;
 
     private static Object line;
     private static Method copy;
@@ -37,6 +40,11 @@ public final class LyricsStyle {
     private static Constructor<?> shadowConstructor;
     private static boolean shadowColorFirst;
     private static boolean broken;
+    private static Constructor<?> spanConstructor;
+    private static Method spanMerge;
+    private static int spanShadowIndex = -1;
+    private static int spanMaskIndex = -1;
+    private static boolean spanBroken;
 
     private LyricsStyle() {}
 
@@ -48,6 +56,63 @@ public final class LyricsStyle {
     /** The lyrics line about to style its text, for the scale of its sung-line animation. */
     public static void setLine(Object lambda) {
         line = lambda;
+    }
+
+    /**
+     * The sung words' style, glowing. Spotify fills a line word by word with two spans, the sung words
+     * first, so a glow on that span lights up only the letters already sung, the way Spicy Lyrics does,
+     * instead of the whole line's layer, which Android glows as a box. Merged in through the span's own
+     * merge, so the span keeps its color and everything else.
+     */
+    public static Object glowSpan(Object span) {
+        if (spanBroken || span == null || !LyricsColors.styled()) return span;
+        try {
+            if (spanConstructor == null) findSpan(span.getClass());
+            float glow = glow();
+            if (glow <= 0.01f) return span;
+            Class<?>[] types = spanConstructor.getParameterTypes();
+            Object[] args = new Object[types.length];
+            for (int i = 0; i < types.length; i++) args[i] = zero(types[i]);
+            args[spanShadowIndex] = shadow(glow);
+            args[spanMaskIndex] = SPAN_ALL_DEFAULT & ~SPAN_SHADOW_BIT;
+            Object glowing = spanConstructor.newInstance(args);
+            return spanMerge.invoke(span, glowing);
+        } catch (Throwable e) {
+            spanBroken = true;
+            Log.w(TAG, "Lyrics glow unchanged", e);
+            return span;
+        }
+    }
+
+    private static void findSpan(Class<?> spanClass) throws ReflectiveOperationException {
+        Class<?> shadowClass = Class.forName("androidx.compose.ui.graphics.Shadow");
+        findShadow(shadowClass);
+        for (Constructor<?> constructor : spanClass.getDeclaredConstructors()) {
+            Class<?>[] types = constructor.getParameterTypes();
+            if (types.length < 10 || types[0] != long.class) continue;
+            int mask = types[types.length - 1] == int.class ? types.length - 1
+                    : types.length > 1 && types[types.length - 2] == int.class && !types[types.length - 1].isPrimitive()
+                    ? types.length - 2 : -1;
+            if (mask < 0) continue;
+            int shadow = -1;
+            for (int i = 0; i < types.length; i++) if (types[i] == shadowClass) shadow = i;
+            if (shadow < 0) continue;
+            constructor.setAccessible(true);
+            spanConstructor = constructor;
+            spanShadowIndex = shadow;
+            spanMaskIndex = mask;
+            break;
+        }
+        if (spanConstructor == null) throw new NoSuchMethodException("SpanStyle constructor");
+        for (Method method : spanClass.getDeclaredMethods()) {
+            Class<?>[] types = method.getParameterTypes();
+            if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != spanClass) continue;
+            if (types.length != 1 || types[0] != spanClass) continue;
+            method.setAccessible(true);
+            spanMerge = method;
+            break;
+        }
+        if (spanMerge == null) throw new NoSuchMethodException("SpanStyle merge");
     }
 
     public static Object restyle(Object style) {
@@ -114,6 +179,12 @@ public final class LyricsStyle {
         }
         if (copy == null) throw new NoSuchMethodException("TextStyle copy");
         bold = fontWeight(weightClass, BOLD);
+        findShadow(shadowClass);
+
+    }
+
+    private static void findShadow(Class<?> shadowClass) throws NoSuchMethodException {
+        if (shadowConstructor != null) return;
         for (Constructor<?> constructor : shadowClass.getDeclaredConstructors()) {
             Class<?>[] p = constructor.getParameterTypes();
             if (p.length < 3) continue;

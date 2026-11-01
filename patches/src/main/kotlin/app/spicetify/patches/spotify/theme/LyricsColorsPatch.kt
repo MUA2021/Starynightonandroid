@@ -137,6 +137,34 @@ internal val lyricsColorsPatch = bytecodePatch {
             check-cast v$styleRegister, $styleType
         """.trimIndent())
 
+        // The glow: on the span of the words already sung, the first span the line builds, so it
+        // follows the word-by-word fill and lights the letters instead of the line's whole layer.
+        val spanInstructions = text.implementation!!.instructions.toList()
+        val spanIndex = spanInstructions.indices.firstOrNull { index ->
+            val call = (spanInstructions[index] as? ReferenceInstruction)?.reference as? MethodReference
+            val types = call?.parameterTypes?.map { it.toString() }
+            call != null && call.name == "<init>" && types != null && types.size >= 10 &&
+                types.first() == "J" && SHADOW in types && types.last() == "I"
+        }
+        if (spanIndex != null) {
+            val spanCall = spanInstructions[spanIndex]
+            val spanType = ((spanCall as ReferenceInstruction).reference as MethodReference).definingClass
+            val spanRegister = when (spanCall) {
+                is com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction -> spanCall.startRegister
+                is com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction -> spanCall.registerC
+                else -> throw PatchException("Unexpected span constructor call.")
+            }
+            text.addInstructions(spanIndex + 1, """
+                invoke-static/range { p0 .. p0 }, $LYRICS_STYLE_CLASS->setLine(Ljava/lang/Object;)V
+                invoke-static/range { v$spanRegister .. v$spanRegister }, $LYRICS_STYLE_CLASS->glowSpan(Ljava/lang/Object;)Ljava/lang/Object;
+                move-result-object v$spanRegister
+                check-cast v$spanRegister, $spanType
+            """.trimIndent())
+            Logger.getLogger("").info("Lyrics glow hook: $spanType at $spanIndex")
+        } else {
+            Logger.getLogger("").warning("Lyrics sung-words span not found; no glow.")
+        }
+
         // The text's lambda gets the line's scale animation as its constructor's 4th parameter; its
         // field's name goes to the extension, which reads the scale to fade the glow in and out.
         val lambdaClass = text.definingClass
