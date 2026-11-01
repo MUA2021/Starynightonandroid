@@ -15,8 +15,9 @@ import android.graphics.Color;
 public final class LyricsColors {
     private static final String PREFERENCES = "spicetify_theme";
     private static final String KEY = "themed_lyrics";
-    /** The card's opacity: frosted glass, like Spicy Lyrics' card, rather than a solid block. */
-    private static final int GLASS_ALPHA = 0xBF;
+    /** Frosted glass: how far the song's color moves toward white, and toward its own gray. */
+    private static final float FROST_LIGHT = 0.16f;
+    private static final float FROST_SOFTEN = 0.22f;
     /** The other lines: see-through white, the way Spicy Lyrics fades the lines not being sung. */
     private static final int FADED_ALPHA = 0x73;
 
@@ -48,10 +49,25 @@ public final class LyricsColors {
         return enabled;
     }
 
-    /** Behind the lyrics: Spotify's color for the song, as frosted glass. */
+    /**
+     * Behind the lyrics: Spotify's color for the song, frosted. Solid, like Spicy Lyrics' card, and
+     * lighter and softer than the song's color, the way frosted glass looks over it.
+     */
     public static int background(int spotify) {
         if (!active()) return spotify;
-        return (GLASS_ALPHA << 24) | (spotify & 0x00FFFFFF);
+        int r = Color.red(spotify);
+        int g = Color.green(spotify);
+        int b = Color.blue(spotify);
+        int gray = Math.round(r * 0.299f + g * 0.587f + b * 0.114f);
+        r = frost(r, gray);
+        g = frost(g, gray);
+        b = frost(b, gray);
+        return Color.rgb(r, g, b);
+    }
+
+    private static int frost(int channel, int gray) {
+        float soft = channel + (gray - channel) * FROST_SOFTEN;
+        return Math.min(255, Math.round(soft + (255 - soft) * FROST_LIGHT));
     }
 
     /** Spotify shrinks the lines not being sung to this; Spicy Lyrics sets them back further. */
