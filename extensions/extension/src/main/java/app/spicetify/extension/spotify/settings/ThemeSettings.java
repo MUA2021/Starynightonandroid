@@ -19,6 +19,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import app.spicetify.extension.spotify.theme.SpicetifyTheme;
+import app.spicetify.extension.spotify.theme.LyricsColors;
 import app.spicetify.extension.spotify.theme.ThemeBackground;
 import app.spicetify.extension.spotify.theme.ThemeException;
 import app.spicetify.extension.spotify.theme.ThemePresets;
@@ -80,6 +81,13 @@ final class ThemeSettings {
                         activity.refreshRestartBar();
                     });
         }
+        SpotifyStyle.toggleRow(content, "Spicy-style lyrics",
+                "Spicy Lyrics style: the song's color as frosted glass, bold lines, and the line being sung glowing white.",
+                LyricsColors.isEnabled(activity), (button, enabled) -> {
+                    LyricsColors.setEnabled(activity, enabled);
+                    PatchSettings.markRestartRequired();
+                    activity.refreshRestartBar();
+                });
         SpotifyStyle.toggleRow(content, "Animated stars",
                 "A night sky with twinkling and shooting stars behind Spotify's pages, like the StarryNight desktop theme.",
                 ThemeBackground.starsEnabled(activity), (button, enabled) -> {

@@ -40,6 +40,7 @@ public final class ThemeRuntime {
             ThemeState.migrate(context);
             if (!supported()) return;
             Application application = (Application) context.getApplicationContext();
+            LyricsColors.load(application);
             boolean overlay = overlay(application);
             // A table from before an update to Android 14 has nothing left to do.
             if (overlay) ThemeTable.delete(application);

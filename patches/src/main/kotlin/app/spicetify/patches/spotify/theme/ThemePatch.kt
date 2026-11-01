@@ -40,7 +40,7 @@ val themePatch = bytecodePatch(
     default = false,
 ) {
     compatibleWith(spotifyCompatibility)
-    dependsOn(themeSettingsPatch, themeResourcesPatch, themeComposePatch)
+    dependsOn(themeSettingsPatch, themeResourcesPatch, themeComposePatch, lyricsColorsPatch)
 
     execute {
         injectTable(ROLE_MAP_CLASS, "encoded", roleTableForExtension)
