@@ -180,7 +180,14 @@ public final class ThemeRuntime {
         }
 
         @Override public void onActivityStarted(Activity activity) {}
-        @Override public void onActivityResumed(Activity activity) {}
+        @Override
+        public void onActivityResumed(Activity activity) {
+            try {
+                HighRefresh.applyTo(activity);
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Refresh rate unchanged in " + activity.getClass().getName(), e);
+            }
+        }
         @Override public void onActivityPaused(Activity activity) {}
         @Override public void onActivityStopped(Activity activity) {}
         @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) {}

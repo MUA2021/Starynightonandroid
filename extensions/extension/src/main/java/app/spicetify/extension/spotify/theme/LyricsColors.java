@@ -62,6 +62,14 @@ public final class LyricsColors {
         return Math.min(255, Math.round(channel + (255 - channel) * FROST_LIGHT));
     }
 
+    /**
+     * Full-screen lyrics compare a song's colors with Spotify's "no colors" fallback and use their own
+     * gray when they match. Restyled, every song matches it, so the comparison is turned off.
+     */
+    public static boolean isFallback(boolean matches) {
+        return !active() && matches;
+    }
+
     /** Spotify shrinks the lines not being sung to this; Spicy Lyrics sets them back further. */
     private static final float SPOTIFY_INACTIVE_SCALE = 0.83f;
     private static final float SPICY_INACTIVE_SCALE = 0.72f;

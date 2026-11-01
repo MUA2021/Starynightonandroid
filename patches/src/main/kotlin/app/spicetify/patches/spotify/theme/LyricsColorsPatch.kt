@@ -54,6 +54,21 @@ internal object ColorLyricsConverterFingerprint : Fingerprint(
     },
 )
 
+/**
+ * Full-screen lyrics' color getter (colors, getter): Spotify's own gray when the colors equal its
+ * "no colors" fallback, which it builds from these hex strings.
+ */
+internal object LyricsFallbackColorsFingerprint : Fingerprint(
+    returnType = "J",
+    filters = listOf(string("FF353535"), string("FFCDCDCD")),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any {
+            val call = (it as? ReferenceInstruction)?.reference as? MethodReference
+            call != null && call.name == "equals" && !call.definingClass.startsWith("Ljava/")
+        } == true
+    },
+)
+
 /** The lyrics line, which animates its color and its scale between the sung line and the others. */
 internal object LyricsLineFingerprint : Fingerprint(
     filters = listOf(string("lyrics line scale")),
@@ -91,6 +106,20 @@ internal val lyricsColorsPatch = bytecodePatch {
             move-result p5
         """.trimIndent())
         Logger.getLogger("").info("Lyrics colors hook: $colorsClass-><init>")
+
+        // Full-screen lyrics: the "no colors" comparison would match every restyled song and turn it gray.
+        val fallback = LyricsFallbackColorsFingerprint.matchAll(1..1).single().method
+        val fallbackInstructions = fallback.implementation!!.instructions
+        val equalsIndex = fallbackInstructions.indices.singleOrNull { index ->
+            val call = (fallbackInstructions[index] as? ReferenceInstruction)?.reference as? MethodReference
+            call != null && call.name == "equals" && call.definingClass == colorsClass
+        } ?: throw PatchException("Lyrics fallback colors comparison not found.")
+        val matches = (fallbackInstructions[equalsIndex + 1] as OneRegisterInstruction).registerA
+        fallback.addInstructions(equalsIndex + 2, """
+            invoke-static/range { v$matches .. v$matches }, $LYRICS_COLORS_CLASS->isFallback(Z)Z
+            move-result v$matches
+        """.trimIndent())
+        Logger.getLogger("").info("Lyrics fallback colors hook: ${fallback.definingClass}->${fallback.name}")
 
         // The lines not being sung: smaller, so the sung line stands out the way it does in Spicy Lyrics.
         val line = LyricsLineFingerprint.matchAll(1..1).single().method

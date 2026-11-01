@@ -19,6 +19,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import app.spicetify.extension.spotify.theme.SpicetifyTheme;
+import app.spicetify.extension.spotify.theme.HighRefresh;
 import app.spicetify.extension.spotify.theme.LyricsColors;
 import app.spicetify.extension.spotify.theme.ThemeBackground;
 import app.spicetify.extension.spotify.theme.ThemeException;
@@ -85,6 +86,13 @@ final class ThemeSettings {
                 "Spicy Lyrics style: a frosted panel in the theme's colors, bold lines, and the line being sung glowing white.",
                 LyricsColors.isEnabled(activity), (button, enabled) -> {
                     LyricsColors.setEnabled(activity, enabled);
+                    PatchSettings.markRestartRequired();
+                    activity.refreshRestartBar();
+                });
+        SpotifyStyle.toggleRow(content, "Keep 120 Hz",
+                "Keeps the screen at its fastest refresh rate while Spotify is open, so lyrics scroll smoothly. Uses more battery.",
+                HighRefresh.isEnabled(activity), (button, enabled) -> {
+                    HighRefresh.setEnabled(activity, enabled);
                     PatchSettings.markRestartRequired();
                     activity.refreshRestartBar();
                 });

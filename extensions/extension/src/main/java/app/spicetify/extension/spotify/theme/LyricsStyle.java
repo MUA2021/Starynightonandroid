@@ -26,6 +26,8 @@ public final class LyricsStyle {
     private static final float GLOW_RADIUS = 10f;
     /** The glow's strongest opacity: soft, so the white text stays crisp on top of it. */
     private static final int GLOW_ALPHA = 0x80;
+    /** Off: see restyle. */
+    private static final boolean GLOW = false;
 
     private static Object line;
     private static Method copy;
@@ -59,7 +61,9 @@ public final class LyricsStyle {
             args[0] = style;
             args[weightIndex] = bold;
             int mask = ALL_DEFAULT & ~FONT_WEIGHT_BIT;
-            if (glow > 0.01f) {
+            // Spotify draws the sung line as one layer for its word-by-word fill, and Android glows a
+            // layer's whole rectangle, not its letters: the glow would be a box, so it's left off.
+            if (GLOW && glow > 0.01f) {
                 args[shadowIndex] = shadow(glow);
                 mask &= ~SHADOW_BIT;
             }
